@@ -1,23 +1,27 @@
-CC=gcc
 
-ALL_C=$(wildcard *.c)
-SOURCES?=$(filter-out %_test.c,$(ALL_C))
-OBJS?=$(addprefix , $(SOURCES:.c=.o)) 
+CC := gcc
 
-CFLAGS +=-W -Wall -pedantic -O2 -I.
+ALL_C	?= $(wildcard *.c)
+SOURCES	?= $(filter-out %_test.c,$(ALL_C))
+OBJS	?= $(addprefix , $(SOURCES:.c=.o)) 
 
-LDFLAGS+=
+CFLAGS  := -W -Wall -pedantic -O2 -I.
 
-TARGET := usart
+LDFLAGS :=
+
+TARGET  := usart
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+	@echo "[CC] $@"
+	@$(CC) $(LDFLAGS) -o $@ $(OBJS)
 
 $(OBJS): %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "[CC] $@"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	@echo "[RM] $(OBJS)"
+	@rm -f $(OBJS) $(TARGET)
 

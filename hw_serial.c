@@ -7,8 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-#define BAUDRATE_LIST_SIZE 	(sizeof(baudrate_list) / sizeof(struct _baudrate_info))
+#include <errno.h>
 
 struct _baudrate_info {
     int bps;
@@ -36,26 +35,32 @@ const struct _baudrate_info baudrate_list[] = {
     { 230400, B230400 },
 };
 
+static size_t get_bps_list_size()
+{
+    return (sizeof(baudrate_list) / sizeof(struct _baudrate_info));
+}
+
 int open_serial(const char *dev, int bps)
 {
     struct termios config;
     int bdrate = B19200;
-    unsigned int i;
     int fd;
+    size_t i;
 
     if (!dev || !strlen(dev)) {
+        fprintf(stderr,"device error: %s\n", dev);
         return -1;
     }
     fd = open(dev, O_RDWR | O_NOCTTY | O_NDELAY);
     /* fclose error */
     if (fd < 0) {
-        perror("open serial");
+        fprintf(stderr,"open [open] serial error: %s\n", strerror(errno));
         return -1;
     }
     fcntl(fd, F_SETFL, 0);
     memset(&config, 0, sizeof(struct termios));
 
-    for(i = 0; i < BAUDRATE_LIST_SIZE; i++) {
+    for(i = 0; i < get_bps_list_size(); i++) {
         if ( baudrate_list[i].bps == bps ) {
             bdrate =  baudrate_list[i].bdrate;
             break;
@@ -71,7 +76,6 @@ int open_serial(const char *dev, int bps)
     config.c_cflag |= CS8;
 
     /* enable raw input */
-    config.c_cflag |= (CLOCAL | CREAD);
     config.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
 
     /* raw output */
@@ -79,12 +83,13 @@ int open_serial(const char *dev, int bps)
 
     /* no flow control... */
     config.c_iflag &= ~(IXON | IXOFF | IXANY);
-    config.c_cflag |= CLOCAL|CREAD;
+    config.c_cflag |= (CLOCAL|CREAD);
     config.c_cc[VMIN] = 0;
-    config.c_cc[VTIME] = 10;
+    config.c_cc[VTIME] = 255;
 
     tcflush(fd, TCIOFLUSH);
     if (tcsetattr(fd, TCSANOW, &config) < 0) {
+        fprintf(stderr,"open [tcsetattr] serial error: %s\n", strerror(errno));
         close(fd);
         return -1;
     }
